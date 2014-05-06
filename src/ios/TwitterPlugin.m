@@ -9,7 +9,8 @@
     #import <Cordova/CDVJSON.h>
     #import <Cordova/CDVAvailability.h>
 
-#define TWITTER_URL @"http://api.twitter.com/1.1/"
+#define TWITTER_URL @"https://api.twitter.com/1.1/"
+#define FACEBOOK_URL @"https://graph.facebook.com/"
 
 @implementation TwitterPlugin
 
@@ -25,6 +26,18 @@
 
     [super writeJavascript:[[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsInt:canTweet ? 1 : 0] toSuccessCallbackString:command.callbackId]];
 }
+
+- (void) isFacebookAvailable:(CDVInvokedUrlCommand*)command {
+   if([SLComposeViewController isAvailableForServiceType:SLServiceTypeFacebook]) {
+       NSLog(@"FACEBOOK Available!!");
+       [super writeJavascript:[[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsInt:1] toSuccessCallbackString:command.callbackId]];
+
+    } else{
+        NSLog(@"FACEBOOK UnAvailable");
+       [super writeJavascript:[[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsInt:0] toSuccessCallbackString:command.callbackId]];
+    }
+
+ }
 
 - (void) composeTweet:(CDVInvokedUrlCommand*)command {
     // arguments: callback, tweet text, url attachment, image attachment
@@ -262,6 +275,99 @@
             NSString *jsResponse = [[CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR 
                                                       messageAsString:@"Access to Twitter accounts denied by user"] 
                                     toErrorCallbackString:callbackId];
+            [self performCallbackOnMainThreadforJS:jsResponse];
+        }
+    }];
+}
+
+
+- (void) getFBRequest:(CDVInvokedUrlCommand*)command {
+    NSString *callbackId = command.callbackId;
+    NSMutableDictionary* options = (NSMutableDictionary*)[command argumentAtIndex:0];
+    NSString *urlSlug = [options objectForKey:@"url"];
+    NSString *url = [NSString stringWithFormat:@"%@%@", FACEBOOK_URL, urlSlug];
+
+    NSDictionary *params = [options objectForKey:@"params"] ?: nil;
+    // We might want to safety check here that params is indeed a dictionary.
+
+    NSString *reqMethod = [options objectForKey:@"requestMethod"] ?: @"";
+    TWRequestMethod method;
+    if ([reqMethod isEqualToString:@"POST"]) {
+        method = TWRequestMethodPOST;
+        NSLog(@"POST");
+    }
+    else if ([reqMethod isEqualToString:@"DELETE"]) {
+        method = TWRequestMethodDELETE;
+        NSLog(@"DELETE");
+    }
+    else {
+        method = TWRequestMethodGET;
+        NSLog(@"GET");
+    }
+
+
+    // We should probably store the chosen account as an instance variable so as to not request it for every request.
+
+    ACAccountStore *accountStore = [[ACAccountStore alloc] init];
+    ACAccountType *accountType = [accountStore accountTypeWithAccountTypeIdentifier:ACAccountTypeIdentifierFacebook];
+
+    // Specify App ID and permissions
+    NSDictionary *fbOptions = @{
+          ACFacebookAppIdKey: @"---REPLACE ME---",
+          ACFacebookPermissionsKey: @[@"email"],
+          ACFacebookAudienceKey: ACFacebookAudienceFriends
+    };
+
+    [accountStore requestAccessToAccountsWithType:accountType options:fbOptions completion:^(BOOL granted, NSError *error) {
+        if(granted) {
+            NSArray *accountsArray = [accountStore accountsWithAccountType:accountType];
+            // making assumption they only have one facebook account configured, should probably revisit
+            if([accountsArray count] > 0) {
+
+                SLRequest *feedRequest = [SLRequest
+                        requestForServiceType:SLServiceTypeFacebook
+                        requestMethod:method
+                        URL:[NSURL URLWithString:url]
+                        parameters:params];
+
+
+
+NSLog(@"URL %@", [NSURL URLWithString:url]);
+NSLog(@"PARAMS %@", params);
+
+
+                [feedRequest setAccount:[accountsArray objectAtIndex:0]];
+
+                [feedRequest performRequestWithHandler:^(NSData *responseData,
+                       NSHTTPURLResponse *urlResponse, NSError *error)
+                {
+                    // Handle response
+                    NSString *jsResponse;
+                    if([urlResponse statusCode] == 200) {
+                        NSString *dataString = [[NSString alloc] initWithData:responseData encoding:NSUTF8StringEncoding];
+                        NSDictionary *dict = [dataString JSONObject];
+                        jsResponse = [[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:dict] toSuccessCallbackString:callbackId];
+                    } else {
+                        jsResponse = [[CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
+                                                    messageAsString:[NSString stringWithFormat:@"HTTP Error: %i", [urlResponse statusCode]]]
+                                  toErrorCallbackString:callbackId];
+                    }
+                    [self performCallbackOnMainThreadforJS:jsResponse];
+                }];
+            }
+            else{
+                NSString *jsResponse = [[CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
+                                                          messageAsString:@"No Facebook accounts available"]
+                                        toErrorCallbackString:callbackId];
+                NSLog(@"%@", error);
+                [self performCallbackOnMainThreadforJS:jsResponse];
+            }
+        }
+        else{
+            NSString *jsResponse = [[CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
+                                                      messageAsString:@"Access to Facebook accounts denied by user"]
+                                    toErrorCallbackString:callbackId];
+                                     NSLog(@"%@", error);
             [self performCallbackOnMainThreadforJS:jsResponse];
         }
     }];

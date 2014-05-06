@@ -30,6 +30,8 @@
 
 - (void) getTWRequest:(CDVInvokedUrlCommand*)command;
 
+- (void) getFBRequest:(CDVInvokedUrlCommand*)command;
+
 - (void) performCallbackOnMainThreadforJS:(NSString*)js;
 
 @end

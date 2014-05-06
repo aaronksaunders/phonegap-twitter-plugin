@@ -16,6 +16,18 @@ Twitter.prototype.isTwitterAvailable = function(response){
     cordova.exec(response, null, "TwitterPlugin", "isTwitterAvailable", []);
 };
 /**
+ * Checks if the Facebook SDK is loaded
+ * @param {Function} response callback on result
+ * @param {Number} response.response is 1 for success, 0 for failure
+ * @example
+ *      window.plugins.twitter.isFacebookAvailable(function (response) {
+ *          console.log("facebook available? " + response);
+ *      });
+ */
+Twitter.prototype.isFacebookAvailable = function(response){
+    cordova.exec(response, null, "TwitterPlugin", "isFacebookAvailable", []);
+};
+/**
  * Checks if the Twitter SDK can send a tweet
  * @param {Function} response callback on result
  * @param {Number} response.response is 1 for success, 0 for failure
@@ -128,6 +140,14 @@ Twitter.prototype.getTWRequest = function(url, params, success, failure, options
     options.params = params;
     cordova.exec(success, failure, "TwitterPlugin", "getTWRequest", [options]);
 };
+
+Twitter.prototype.getFBRequest = function(url, params, success, failure, options){
+    options = options || {};
+    options.url = url;
+    options.params = params;
+    cordova.exec(success, failure, "TwitterPlugin", "getFBRequest", [options]);
+};
+
 
 module.exports = new Twitter();
 

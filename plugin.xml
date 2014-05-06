@@ -5,7 +5,8 @@
     version="0.3.2">
 
     <name>Twitter Connect</name>
-    <description>This is Etienne Adriaenssen's verison the plugin for Twitter in Apache Cordova/PhoneGap!</description>
+    <description>This is a modified version of Etienne Adriaenssen's the plugin for Twitter in Apache Cordova/PhoneGap! I have added basic support for integrating with Facebook through the native IOS
+        SDK</description>
     <license>MIT</license>
 
     <js-module src="www/TwitterPlugin.js" name="TwitterPlugin">
